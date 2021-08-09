@@ -20,9 +20,6 @@ class CategorySerializer (serializers.ModelSerializer):
 
 
 class UserSerializer (serializers.Serializer):
-    # class Meta:
-    #     model = Users
-    #     fields = "__all__"
     id = serializers.IntegerField()
     name = serializers.CharField(max_length=255)
     email = serializers.CharField(max_length=255)
@@ -63,7 +60,6 @@ class PostSerializer(serializers.ModelSerializer):
             return 'Not Available'
 
     def getUserImage(self, post):
-        # user_id = self.context.get("user_id")
         user = post.user.id
         try:
             userModel = Users.objects.get(id=user)
@@ -143,7 +139,6 @@ class UserBookViewSerializer(serializers.ModelSerializer):
 
         return serializer.data[0]
 
-
     class Meta:
         model = UserBookViews
         fields = "__all__"
@@ -154,89 +149,4 @@ class UserBookViewSerializer(serializers.ModelSerializer):
 class PostsReportSerializer(serializers.ModelSerializer):
     class Meta:
         model = PostReports
-        fields = "__all__"
-
-class BookPagesMediaSerializer(serializers.ModelSerializer):
-
-    book_detail = serializers.SerializerMethodField('getBookDetail')
-    book_category = serializers.SerializerMethodField('getBookCategory')
-
-
-    def getBookDetail(self, userbook):
-        booklist = UsersBooks.objects.filter(id=userbook.book.id)
-        book = booklist[0]
-        return {'book_id':book.id,'book_title':book.book_title,'book_author':book.book_author,'book_publisher':book.book_publisher,'media_path':book.media_path, 'cover_pic_path':book.cover_pic_path, 'number_of_views':book.number_of_views, 'number_of_likes':book.number_of_likes, 'is_public':book.is_public, 'is_approved':book.is_approved, 'type':book.type}
-
-    def getBookCategory(self,userbook):
-        booklist = UsersBooksCategories.objects.filter(book=userbook.book)
-
-        book_category = booklist[0]
-        dictdata = model_to_dict(book_category)
-        return dictdata.get('cat')
-
-    class Meta:
-        model = BookPagesMedia
-        fields = "__all__"
-
-class PostsCommentSerializer(serializers.ModelSerializer):
-    user_name = serializers.SerializerMethodField('getUserName')
-    user_pic = serializers.SerializerMethodField('getUserImage')
-    child_comment = serializers.SerializerMethodField('getChildComment')
-    def getUserName(self, postComment):
-        #user_id = self.context.get("user_id")
-        user = postComment.user.id
-        try:
-            userModel = Users.objects.get(id=user)
-            return userModel.name
-        except:
-            return 'Not Available'
-
-    def getUserImage(self, postComment):
-        #user_id = self.context.get("user_id")
-        user = postComment.user.id
-        try:
-            userModel = Users.objects.get(id=user)
-            return userModel.users_pic
-        except:
-            return 'Not Available'
-
-    def getChildComment(self, postComment):
-        #user_id = self.context.get("user_id")
-        user = postComment.user.id
-        try:
-            postcommentCount = PostComments.objects.filter(post=postComment.post, parent_comment_id=postComment.id).exclude(is_deleted=1)
-            postcommentTemp = PostComments.objects.filter(post=postComment.post,
-                                                          parent_comment_id=postComment.id).exclude(is_deleted=1)[0:2]
-            serializer = PostsCommentSerializer(postcommentTemp, many=True)
-
-            return {'count':len(postcommentCount), 'child':serializer.data}
-        except:
-            return {'count':0, 'child':[]}
-
-
-    class Meta:
-        model = PostComments
-        fields = "__all__"
-
-
-class FileSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = UploadedFiles
-        fields = "__all__"
-
-class SubscriptionSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = SubscriptionPlans
-        fields = "__all__"
-
-class CMSSerializer(serializers.ModelSerializer):
-
-    class Meta:
-        model = CMS
-        fields = "__all__"
-
-class UserSubscriptionSerializer(serializers.ModelSerializer):
-
-    class Meta:
-        model = UsersSubscriptions
         fields = "__all__"
