@@ -1,44 +1,8 @@
-# This is an auto-generated Django model module.
-# You'll have to do the following manually to clean this up:
-#   * Rearrange models' order
-#   * Make sure each model has one field with primary_key=True
-#   * Make sure each ForeignKey and OneToOneField has `on_delete` set to the desired behavior
-#   * Remov` lines if you wish to allow Django to create, modify, and delete the table
-# Feel free to rename the models, but don't rename db_table values or field names.
-from django.core.serializers import json
 from django.db import models
 from bookiebot.storage_backends import  PublicMediaStorage
-import time
-
-
-class AllowedFeaturesInSubscriptions(models.Model):
-    plan = models.ForeignKey('SubscriptionPlans', models.DO_NOTHING)
-    feature_list = models.CharField(max_length=255)
-    is_active = models.IntegerField()
-    is_deleted = models.IntegerField()
-    added_on = models.BigIntegerField()
-    updated_on = models.BigIntegerField()
-
-    class Meta:
-        db_table = 'allowed_features_in_subscriptions'
-
-
-class BookPagesMedia(models.Model):
-    id = models.BigAutoField(primary_key=True)
-    book = models.ForeignKey('UsersBooks', models.DO_NOTHING)
-    page_no = models.IntegerField()
-    pic_url = models.TextField()
-    audio_url = models.TextField()
-    added_on = models.BigIntegerField()
-    updated_on = models.BigIntegerField()
-
-    class Meta:
-        db_table = 'book_pages_media'
-
 
 
 class UploadedFiles(models.Model):
-
     id = models.BigAutoField(primary_key=True)
     file = models.FileField(blank=False, null=False)
     storage = PublicMediaStorage()
@@ -80,18 +44,6 @@ class UserLoggedIn(models.Model):
 
     class Meta:
         db_table = 'user_loggedin'
-
-
-
-class AppSettings(models.Model):
-    id = models.BigAutoField(primary_key=True)
-    lowest_version_ios = models.FloatField(default=1.0)
-    lowest_version_android = models.FloatField(default=1.0)
-    created_at = models.BigIntegerField(default=int(time.time()))
-    updated_at = models.BigIntegerField(default=int(time.time()))
-    class Meta:
-        db_table = 'app_settings'
-
 
 
 class UsersLibrary(models.Model):

@@ -5,48 +5,15 @@ from django.core.mail import send_mail
 from django.db.models import Q
 from rest_framework.parsers import FileUploadParser
 from rest_framework.views import APIView
-from rest_framework.decorators import api_view
 
-from api.controller.category_module import CategoryController
 from api.controller.post_module import PostController
-from api.models import Users, Categories, AppSettings, Posts, UserLoggedIn
+from api.models import Users, UserLoggedIn
 from api.utills import constants
 from api.utills.response import ok_response, createNewPassword, modify_input_for_multiple_files
 from api.controller.users import UserController
 import jwt
-from api.utills.serializers import CategorySerializer, UserSerializer, FileSerializer
+from api.utills.serializers import UserSerializer, FileSerializer
 from bookiebot.settings import EMAIL_HOST_USER
-
-import io
-from rest_framework.parsers import JSONParser
-from api.utills.swagger_schema import LoginViewSchema, BookAPISchema
-from rest_framework.schemas import AutoSchema
-
-
-@api_view(['GET', 'POST', 'DELETE'])
-def get_version(request):
-    if request.method == 'GET':
-        app_settings = AppSettings.objects.all()
-        if len(app_settings) > 0:
-            last_obj = list(app_settings)[-1]
-
-            return ok_response({"lowest_version_ios": last_obj.lowest_version_ios, "lowest_version_android": last_obj.lowest_version_android})
-        else:
-            return ok_response({"lowest_version_ios": 1.0, "lowest_version_android": 1.0})
-
-
-def add_latest_version(request):
-    if request.method == 'POST':
-        print(request.POST)
-        app_settings = AppSettings()
-        app_settings.lowest_version_ios = float(
-            request.POST.get('version_ios'))
-        app_settings.lowest_version_android = float(
-            request.POST.get('version_android'))
-        app_settings.updated_at = int(time.time())
-        app_settings.created_at = int(time.time())
-        app_settings.save()
-        return ok_response({"lowest_version_ios": app_settings.lowest_version_ios, "lowest_version_android": app_settings.lowest_version_android})
 
 
 class LoginView(APIView):
@@ -397,126 +364,6 @@ class UserView(APIView):
                 return ok_response([], message="Unauthorize", code=403)
 
 
-class CategoryView(APIView):
-
-    def get(self, request):
-
-        if request.GET.get('id') is None or not request.GET.get('id'):
-            if request.GET.get('page') is None or not request.GET.get('page'):
-                return ok_response([], message="Page is required", code=201)
-            if request.GET.get('size') is None or not request.GET.get('size'):
-                return ok_response([], message="Size is required", code=201)
-            if int(request.GET.get('size')) == 0:
-                if request.GET.get('active') is None or not request.GET.get('active'):
-                    category = Categories.objects.all().order_by('-updated_on')
-                else:
-                    category = Categories.objects.filter(is_active=1).exclude(
-                        is_deleted=1).order_by('-updated_on')
-                serializer = CategorySerializer(category, many=True)
-                return ok_response(serializer.data, code=200)
-            else:
-                if request.GET.get('active') is None or not request.GET.get('active'):
-                    category = Categories.objects.all().order_by('-updated_on')[(int(request.GET.get('page')) * int(request.GET.get('size'))):(
-                        int(request.GET.get('size')) * (int(request.GET.get('page')) + 1))]
-                else:
-                    category = Categories.objects.filter(is_active=1).exclude(is_deleted=1).order_by('-updated_on')[(int(request.GET.get('page')) * int(request.GET.get('size'))):(
-                        int(request.GET.get('size')) * (int(request.GET.get('page')) + 1))]
-                serializer = CategorySerializer(category, many=True)
-                return ok_response(serializer.data, code=200)
-        else:
-            try:
-                category = Categories.objects.get(id=request.GET.get('id'))
-                if category.is_deleted:
-                    return ok_response([], message="Category has been deleted", code=201)
-                else:
-                    serializer = CategorySerializer([category], many=True)
-                    return ok_response(serializer.data, code=200)
-            except Categories.DoesNotExist:
-                return ok_response([], message="No category found", code=201)
-
-    def post(self, request):
-
-        if not 'authorization' in request.headers.keys():
-            return ok_response([], message="Unauthorize", code=403)
-        else:
-            header = request.headers['authorization']
-            try:
-                userdict = jwt.decode(
-                    header, constants.jwt_key, algorithm=constants.jwt_algorithm)
-
-                reques_data = request.POST
-
-                if reques_data.get('name') is None or not reques_data.get('name'):
-                    return ok_response([], message="Category name is required", code=201)
-                if reques_data.get('icon') is None or not reques_data.get('icon'):
-                    return ok_response([], message="Category Icon is required", code=201)
-                if int(userdict['user_role']) == 0:
-                    return ok_response([], message="Unauthorize", code=403)
-                else:
-                    cat_controller = CategoryController()
-                    return cat_controller.create_category(reques_data)
-
-            except:
-                return ok_response([], message="Unauthorize", code=403)
-
-    def put(self, request):
-        if not 'authorization' in request.headers.keys():
-            return ok_response([], message="Unauthorize", code=403)
-        else:
-            header = request.headers['authorization']
-            try:
-                userdict = jwt.decode(
-                    header, constants.jwt_key, algorithm=constants.jwt_algorithm)
-                reques_data = request.data
-
-                if reques_data.get('id') is None or not reques_data.get('id'):
-                    return ok_response([], message="Category ID is required", code=201)
-                if int(userdict['user_role']) == 0:
-                    return ok_response([], message="Unauthorize", code=403)
-                else:
-                    cat_controller = CategoryController()
-                    return cat_controller.update_category(reques_data)
-            except:
-                return ok_response([], message="Unauthorize", code=403)
-
-    def delete(self, request):
-        if not 'authorization' in request.headers.keys():
-            return ok_response([], message="Unauthorize", code=403)
-        else:
-            header = request.headers['authorization']
-            try:
-                userdict = jwt.decode(
-                    header, constants.jwt_key, algorithm=constants.jwt_algorithm)
-                reques_data = request.data
-                if reques_data.get('id') is None or not reques_data.get('id'):
-                    return ok_response([], message="Category ID is required", code=201)
-                if int(userdict['user_role']) == 0:
-                    return ok_response([], message="Unauthorize", code=403)
-                else:
-                    cat_controller = CategoryController()
-                    return cat_controller.delete_category(reques_data)
-            except:
-                return ok_response([], message="Unauthorize", code=403)
-
-
-class CategorySearchAPI(APIView):
-    def get(self, request):
-        reques_data = request.GET
-
-        if reques_data.get('keyword') is None:
-            return ok_response([], message="Keyword is required", code=201)
-        if reques_data.get('page') is None or not reques_data.get('page'):
-            return ok_response([], message="Page is required", code=201)
-        if reques_data.get('size') is None or not reques_data.get('size'):
-            return ok_response([], message="Size is required", code=201)
-
-        if reques_data.get('active') is None:
-            return ok_response([], message="Active Key is required", code=201)
-
-        cat_controller = CategoryController()
-        return cat_controller.search_category(reques_data)
-
-
 class UserSearchAPI(APIView):
     def get(self, request):
         reques_data = request.GET
@@ -537,39 +384,6 @@ class UserSearchAPI(APIView):
         cat_controller = UserController()
         return cat_controller.search_user(reques_data)
 
-
-class StatisticsAPI(APIView):
-    def get(self, request):
-        reques_data = request.GET
-        if reques_data.get('active') is None or not reques_data.get('active'):
-            user = Users.objects.all().count()
-            cat = Categories.objects.all().count()
-            post = Posts.objects.all().count()
-            resp = {'user_count': user, 'cat_count': cat, 'post_count': post}
-            return ok_response(resp, code=200)
-        else:
-            if int(reques_data.get('active')) == 0:
-
-                user = Users.objects.filter(
-                    Q(is_deleted=1) or Q(is_active=0)).count()
-                cat = Categories.objects.filter(
-                    Q(is_deleted=1) or Q(is_active=0)).count()
-                post = Posts.objects.filter(
-                    Q(is_deleted=1) or Q(is_active=0)).count()
-                resp = {'user_count': user,
-                        'cat_count': cat, 'post_count': post}
-                return ok_response(resp, code=200)
-            else:
-
-                user = Users.objects.filter(
-                    Q(is_deleted=0) or Q(is_active=1)).count()
-                cat = Categories.objects.filter(
-                    Q(is_deleted=0) or Q(is_active=1)).count()
-                post = Posts.objects.filter(
-                    Q(is_deleted=0) or Q(is_active=1)).count()
-                resp = {'user_count': user,
-                        'cat_count': cat, 'post_count': post}
-                return ok_response(resp, code=200)
 
 
 class PasswordAPI(APIView):
